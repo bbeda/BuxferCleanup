@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.11.35005.142
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BuxferCleanup", "BuxferCleanup\BuxferCleanup.csproj", "{8BD9FC0D-9E65-4DF9-8B8C-98FF83B5837A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{8BD9FC0D-9E65-4DF9-8B8C-98FF83B5837A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8BD9FC0D-9E65-4DF9-8B8C-98FF83B5837A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8BD9FC0D-9E65-4DF9-8B8C-98FF83B5837A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8BD9FC0D-9E65-4DF9-8B8C-98FF83B5837A}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {AC869C57-3283-45F3-96FE-1CF307116E29}
+	EndGlobalSection
+EndGlobal
