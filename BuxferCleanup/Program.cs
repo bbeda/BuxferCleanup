@@ -4,19 +4,22 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
-var host = new HostBuilder().ConfigureAppConfiguration(c => c.AddUserSecrets<BuxferClient>()).ConfigureServices((hostContext, services) =>
-{
-    _ = services.AddHttpClient(BuxferClient.BuxferClientName, client =>
+var host = new HostBuilder()
+    .ConfigureAppConfiguration(c => c.AddUserSecrets<BuxferClient>())
+    .ConfigureServices((hostContext, services) =>
     {
-        client.BaseAddress = new Uri("https://www.buxfer.com/api/");
-    });
-    _ = services.AddMemoryCache();
-    _ = services.Configure<BuxferOptions>(hostContext.Configuration);
-    services.Configure<AccountParams>(hostContext.Configuration.GetSection("AccountParams"));
+        _ = services.AddHttpClient(BuxferClient.BuxferClientName, client =>
+        {
+            client.BaseAddress = new Uri("https://www.buxfer.com/api/");
+        });
+        _ = services.AddMemoryCache();
+        _ = services.Configure<BuxferOptions>(hostContext.Configuration);
+        services.Configure<AccountParams>(hostContext.Configuration.GetSection("AccountParams"));
 
-    _ = services.AddSingleton<BuxferClient>();
-}).UseConsoleLifetime()
-.Build();
+        _ = services.AddSingleton<BuxferClient>();
+    })
+    .UseConsoleLifetime()
+    .Build();
 
 var buxferClient = host.Services.GetRequiredService<BuxferClient>();
 
