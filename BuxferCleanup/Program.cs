@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 
 var host = new HostBuilder().ConfigureAppConfiguration(c => c.AddUserSecrets<BuxferClient>()).ConfigureServices((hostContext, services) =>
 {
@@ -11,6 +12,7 @@ var host = new HostBuilder().ConfigureAppConfiguration(c => c.AddUserSecrets<Bux
     });
     _ = services.AddMemoryCache();
     _ = services.Configure<BuxferOptions>(hostContext.Configuration);
+    services.Configure<AccountParams>(hostContext.Configuration.GetSection("AccountParams"));
 
     _ = services.AddSingleton<BuxferClient>();
 }).UseConsoleLifetime()
@@ -18,9 +20,39 @@ var host = new HostBuilder().ConfigureAppConfiguration(c => c.AddUserSecrets<Bux
 
 var buxferClient = host.Services.GetRequiredService<BuxferClient>();
 
-var transactions = await buxferClient.LoadTransactionsAsync("1441844");
+var accountParamsOptions = host.Services.GetRequiredService<IOptions<AccountParams>>();
 
-foreach (var transaction in transactions.Transactions)
+var mainTransactions = await LoadAccountTransactions(accountParamsOptions.Value.MainAccountId);
+var duplicateTransactions = await LoadAccountTransactions(accountParamsOptions.Value.DuplicateAccountId);
+var toDelete = new List<BuxferTransaction>();
+
+foreach (var duplicateTransaction in duplicateTransactions)
 {
-    Console.WriteLine($"{transaction.Id} - {transaction.AccountId} - {transaction.Date} - {transaction.Amount} - {transaction.Description}");
+    if (mainTransactions.TryGetValue(duplicateTransaction.Key, out var mainTransaction))
+    {
+        Console.WriteLine($"Deleting transaction");
+        Console.WriteLine($"Main     : {mainTransaction}");
+        Console.WriteLine($"Duplicate: {duplicateTransaction.Value}");
+        Console.WriteLine("==============");
+        toDelete.Add(duplicateTransaction.Value);
+    }
+}
+
+Console.WriteLine($"To Delete {toDelete.Count}");
+
+async Task<Dictionary<string, BuxferTransaction>> LoadAccountTransactions(string accountId)
+{
+    var dictionary = new Dictionary<string, BuxferTransaction>();
+    await foreach (var transaction in buxferClient.LoadAllTransactionsAsync(accountId))
+    {
+        dictionary[transaction.DuplicationKey] = transaction;
+    }
+
+    return dictionary;
+}
+
+record AccountParams
+{
+    public string MainAccountId { get; init; } = string.Empty;
+    public string DuplicateAccountId { get; init; } = string.Empty;
 }

@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using System.Net.Http.Json;
+using System.Text;
 
 namespace BuxferCleanup;
 internal class BuxferClient(
@@ -39,12 +40,31 @@ internal class BuxferClient(
         return token;
     }
 
-    public async Task<TransactionsListResponse> LoadTransactionsAsync(string accountId)
+    public async Task<TransactionsListResponse> LoadTransactionsAsync(string accountId, int page = 1)
     {
         var token = await LoadTokenAsync();
         using var client = CreateHttpClient();
-        var response = await client.GetAsync($"transactions?token={token}&page=1&accountId={accountId}");
+        var response = await client.GetAsync($"transactions?token={token}&page={page}&accountId={accountId}");
         return (await response!.Content!.ReadFromJsonAsync<BuxferResponse<TransactionsListResponse>>())?.Response!;
+    }
+
+    public async IAsyncEnumerable<BuxferTransaction> LoadAllTransactionsAsync(string accountId)
+    {
+        var page = 1;
+        TransactionsListResponse? response;
+        do
+        {
+            response = await LoadTransactionsAsync(accountId, page++);
+            foreach (var transaction in response.Transactions)
+            {
+                yield return transaction;
+            }
+
+            if (response.Transactions.Length == 0)
+            {
+                break;
+            }
+        } while (true);
     }
 
     private HttpClient CreateHttpClient() => httpClientFactory.CreateClient(BuxferClientName);
@@ -71,7 +91,23 @@ internal record BuxferTransaction(
     string Date,
     string Type,
     decimal AccountId,
-    string Tags);
+    string Tags)
+{
+    public string DuplicationKey
+    {
+        get
+        {
+            using var memoryStream = new MemoryStream();
+            using var binaryWriter = new BinaryWriter(memoryStream);
+
+            binaryWriter.Write(Description);
+            binaryWriter.Write(Amount);
+            binaryWriter.Write(Date);
+
+            return Convert.ToBase64String(memoryStream.ToArray());
+        }
+    }
+}
 
 internal record TransactionsListResponse(
     string Status,
