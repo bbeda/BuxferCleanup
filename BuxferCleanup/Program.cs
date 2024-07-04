@@ -2,7 +2,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
 
 var host = new HostBuilder()
     .ConfigureAppConfiguration(c => c.AddUserSecrets<BuxferClient>())
@@ -14,47 +13,26 @@ var host = new HostBuilder()
         });
         _ = services.AddMemoryCache();
         _ = services.Configure<BuxferOptions>(hostContext.Configuration);
-        services.Configure<AccountParams>(hostContext.Configuration.GetSection("AccountParams"));
+        _ = services.Configure<AccountParams>(hostContext.Configuration.GetSection("AccountParams"));
 
         _ = services.AddSingleton<BuxferClient>();
+        _ = services.AddScoped<DuplicatesRemovalService>();
     })
     .UseConsoleLifetime()
     .Build();
 
-var buxferClient = host.Services.GetRequiredService<BuxferClient>();
+using var scope = host.Services.CreateScope();
 
-var accountParamsOptions = host.Services.GetRequiredService<IOptions<AccountParams>>();
+await RemoveDuplicatesAsync(scope);
 
-var mainTransactions = await LoadAccountTransactions(accountParamsOptions.Value.MainAccountId);
-var duplicateTransactions = await LoadAccountTransactions(accountParamsOptions.Value.DuplicateAccountId);
-var toDelete = new List<BuxferTransaction>();
-
-foreach (var duplicateTransaction in duplicateTransactions)
+static async Task RemoveDuplicatesAsync(IServiceScope scope)
 {
-    if (mainTransactions.TryGetValue(duplicateTransaction.Key, out var mainTransaction))
-    {
-        Console.WriteLine($"Deleting transaction");
-        Console.WriteLine($"Main     : {mainTransaction}");
-        Console.WriteLine($"Duplicate: {duplicateTransaction.Value}");
-        Console.WriteLine("==============");
-        toDelete.Add(duplicateTransaction.Value);
-    }
+    var removalService = scope.ServiceProvider.GetRequiredService<DuplicatesRemovalService>();
+    var accountParams = scope.ServiceProvider.GetRequiredService<AccountParams>();
+    await removalService.RemoveDuplicates(accountParams.DuplicateAccountId, accountParams.MainAccountId);
 }
 
-Console.WriteLine($"To Delete {toDelete.Count}");
-
-async Task<Dictionary<string, BuxferTransaction>> LoadAccountTransactions(string accountId)
-{
-    var dictionary = new Dictionary<string, BuxferTransaction>();
-    await foreach (var transaction in buxferClient.LoadAllTransactionsAsync(accountId))
-    {
-        dictionary[transaction.DuplicationKey] = transaction;
-    }
-
-    return dictionary;
-}
-
-record AccountParams
+internal record AccountParams
 {
     public string MainAccountId { get; init; } = string.Empty;
     public string DuplicateAccountId { get; init; } = string.Empty;

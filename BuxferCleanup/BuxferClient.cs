@@ -67,6 +67,14 @@ internal class BuxferClient(
         } while (true);
     }
 
+    public async Task DeleteTransactionAsync(string transactionId)
+    {
+        using var client = CreateHttpClient();
+        var token = await LoadTokenAsync();
+        var response = await client.PostAsync($"delete_transaction?token={token}&id={transactionId}", new StringContent(""));
+        response.EnsureSuccessStatusCode();
+    }
+
     private HttpClient CreateHttpClient() => httpClientFactory.CreateClient(BuxferClientName);
 
     private record TokenResponse(string Status, string Token);
